@@ -1,0 +1,66 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-DGL_GLEXT_PROTOTYPES",
+      "-I../common",
+      "-I../common/Linux",
+      "-o",
+      "lab1-1",
+      "lab1-1.cpp"
+    ],
+    "directory": "/home/anton/school/tsbk03/project",
+    "file": "/home/anton/school/tsbk03/project/lab1-1.cpp",
+    "output": "/home/anton/school/tsbk03/project/lab1-1"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-DGL_GLEXT_PROTOTYPES",
+      "-I../common",
+      "-I../common/Linux",
+      "-o",
+      "lab1-1",
+      "../common/GL_utilities.c"
+    ],
+    "directory": "/home/anton/school/tsbk03/project",
+    "file": "/home/anton/school/tsbk03/common/GL_utilities.c",
+    "output": "/home/anton/school/tsbk03/project/lab1-1"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-DGL_GLEXT_PROTOTYPES",
+      "-I../common",
+      "-I../common/Linux",
+      "-o",
+      "lab1-1",
+      "../common/LoadTGA.c"
+    ],
+    "directory": "/home/anton/school/tsbk03/project",
+    "file": "/home/anton/school/tsbk03/common/LoadTGA.c",
+    "output": "/home/anton/school/tsbk03/project/lab1-1"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-DGL_GLEXT_PROTOTYPES",
+      "-I../common",
+      "-I../common/Linux",
+      "-o",
+      "lab1-1",
+      "../common/Linux/MicroGlut.c"
+    ],
+    "directory": "/home/anton/school/tsbk03/project",
+    "file": "/home/anton/school/tsbk03/common/Linux/MicroGlut.c",
+    "output": "/home/anton/school/tsbk03/project/lab1-1"
+  }
+]
