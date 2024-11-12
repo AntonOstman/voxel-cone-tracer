@@ -11,6 +11,7 @@
 #include <GL/glext.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include <stdlib.h>
 #include "MicroGlut.h"
 #define MAIN
@@ -21,7 +22,7 @@
 // uses framework OpenGL
 
 // Window size is defined here since it is also used for the FBOs
-const int initWidth = 1920, initHeight = 1080;
+const int initWidth = 1080, initHeight = 1080;
 
 /*#define NUM_LIGHTS 4*/
 
@@ -46,11 +47,13 @@ GLfloat square[] = {
 							-1,1, 0,
 							1,1, 0,
 							1,-1, 0};
+
 GLfloat squareTexCoord[] = {
 							 0, 0,
 							 0, 1,
 							 1, 1,
 							 1, 0};
+
 GLuint squareIndices[] = {0, 1, 2, 0, 2, 3};
 
 Model* squareModel;
@@ -58,7 +61,24 @@ Model* squareModel;
 //----------------------Globals-------------------------------------------------
 Model **model1;
 FBOstruct *fbo1, *fbo2, *fbo3;
-GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshadery = 0, lowpassshaderx = 0, thresholdshader = 0, combineshader = 0;
+GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshadery = 0, lowpassshaderx = 0, thresholdshader = 0, combineshader = 0, voxeliser = 0, voxelrender = 0;
+GLuint voxelmemory = 0;
+GLuint* voxelpointer = &voxelmemory;
+
+void generateVoxelMemory(GLuint* tex, GLsizei voxelResolution){
+    glGenTextures(1, tex);
+    glBindTexture(GL_TEXTURE_3D, *tex);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, voxelResolution, voxelResolution, voxelResolution, 0, GL_RED,  GL_BYTE, nullptr);
+    printError("glteximage3d");
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    printError("gltexparams");
+
+    glClearTexImage(*tex, 0, GL_RED, GL_BYTE, NULL);
+    glBindTexture(GL_TEXTURE_3D, 0);
+    printError("bindtexture");
+}
 
 //-------------------------------------------------------------------------------------
 void runfilter(GLuint shader, FBOstruct *in1, FBOstruct *in2, FBOstruct *out)
@@ -93,9 +113,14 @@ void init(void)
 	lowpassshadery = loadShaders("src/plaintextureshader.vert", "src/lowpass-y.frag");  // lowpass
 	thresholdshader = loadShaders("src/plaintextureshader.vert", "src/threshold.frag");  // threshold
 	combineshader = loadShaders("src/plaintextureshader.vert", "src/combine.frag");  // threshold
-	phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)
+	/*phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)*/
+
+	phongshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
+	voxelrender = loadShaders("src/renderVoxel.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
 	printError("init shader");
+
+    generateVoxelMemory(voxelpointer, 20);
 
 	fbo1 = initFBO(initWidth, initHeight, 0);
 	fbo2 = initFBO(initWidth, initHeight, 0);
@@ -128,7 +153,6 @@ void init(void)
     campose.tz = 0;
 
 	viewMatrix = lookAtv(cam, point, up);
-    /*viewMatrix = glOrtho();*/
 }
 
 
@@ -189,6 +213,7 @@ void display(void)
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
+    GLfloat voxelResolution = 20.0;
     vec3 lightSource = vec3(-0.24, 1.98, 0.16);
     for (int i = 0; model1[i] != NULL; i++)
     {
@@ -197,10 +222,25 @@ void display(void)
         glUniform3fv(glGetUniformLocation(phongshader, "ks"), 1, &model1[i]->material->Ks.x);
         glUniform3fv(glGetUniformLocation(phongshader, "ke"), 1, &model1[i]->material->Ke.x);
         glUniform3fv(glGetUniformLocation(phongshader, "lightSource"), 1, &lightSource.x);
+        glUniform1fv(glGetUniformLocation(phongshader, "voxelResolution"), 1, &voxelResolution);
+    printError("uniforms");
 
-        DrawModel(model1[i], phongshader, "in_Position", "in_Normal", NULL);
+        /*generateVoxelMemory(voxelpointer, 256);*/
+        glActiveTexture(GL_TEXTURE0);
+        /*glBindImageTexture(GL_TEXTURE_3D, voxelmemory);*/
+        /*glTexImage3D(*tex, 0, GL_R8, voxelResolution, voxelResolution, voxelResolution, 0, GL_RED, GL_TEXTURE_3D, nullptr);*/
+        glBindImageTexture(0, voxelmemory, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R8);
+    printError("bindvoxem memory");
+
+        GLint location = glGetUniformLocation(phongshader, "voxelTexture");
+        glUniform1i(location, 0); // Set the sampler to use texture unit 0
+    printError("set voxel location");
+
+        DrawModel(model1[i], phongshader, "in_Position", NULL, NULL);
+    printError("Draw model error");
     }
 
+    /*DrawModel(squareModel, phongshader, "in_Position", NULL, NULL);*/
 	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
 
 	/*glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.*/
@@ -235,7 +275,9 @@ void reshape(GLsizei w, GLsizei h)
 {
 	glViewport(0, 0, w, h);
 	GLfloat ratio = (GLfloat) w / (GLfloat) h;
-	projectionMatrix = perspective(100, ratio, 1.0, 1000);
+	/*projectionMatrix = perspective(100, ratio, 1.0, 1000);*/
+    float val = 50;
+    projectionMatrix = ortho(-val, val, -val, val, -val, val);
 }
 
 // Trackball
@@ -270,8 +312,8 @@ void mouseDragged(int x, int y)
 
 	/*m = ArbRotate(p, sqrt(p.x*p.x + p.y*p.y) / 50.0); // Rotation in view coordinates	*/
 	/*modelToWorldMatrix = Mult(m, modelToWorldMatrix);*/
-    boxpose.anglez += (x - prevx) / 500.0;
-    boxpose.angley += (y - prevy) / 500.0;
+    boxpose.anglez += (x - prevx) / 10.0;
+    boxpose.angley += (y - prevy) / 10.0;
 	
 	prevx = x;
 	prevy = y;
@@ -328,7 +370,7 @@ int main(int argc, char *argv[])
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
 	glutInitWindowSize(initWidth, initHeight);
 
-	glutInitContextVersion(3, 2);
+	glutInitContextVersion(4, 2);
 	glutCreateWindow ("Render to texture with FBO");
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);

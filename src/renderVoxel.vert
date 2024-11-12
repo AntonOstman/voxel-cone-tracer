@@ -8,6 +8,9 @@ out vec4 position;
 // out vec3 viewSurface; 
 // out vec3 worldSurface; 
 //
+
+layout(r8) uniform image3D voxelMemory;
+
 uniform mat4 worldMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
@@ -20,6 +23,7 @@ void main(void)
 	//
 	// viewSurface = vec3(modelviewMatrix * vec4(in_Position, 1.0)); // Don't include projection here - we only want to go to view coordinates
 	// worldSurface = vec3(worldMatrix * vec4(in_Position, 1.0)); // Don't include projection here - we only want to go to view coordinates
+    // imageLoad(voxelMemory, vec3(0,0,0));
 
 	gl_Position = projectionMatrix * modelviewMatrix * vec4(in_Position, 1.0); // This should include projection
     position = gl_Position;
