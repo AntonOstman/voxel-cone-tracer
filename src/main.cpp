@@ -13,6 +13,8 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <vector>
+
 #include "MicroGlut.h"
 #define MAIN
 #include "VectorUtils4.h"
@@ -64,6 +66,28 @@ FBOstruct *fbo1, *fbo2, *fbo3;
 GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshadery = 0, lowpassshaderx = 0, thresholdshader = 0, combineshader = 0, voxeliser = 0, voxelrender = 0;
 GLuint voxelmemory = 0;
 GLuint* voxelpointer = &voxelmemory;
+
+
+void createEmtpyVoxelVertices(){
+
+std::vector<vec3> vertices;
+
+int gridSize = 10;  // For a 10x10x10 grid
+for (int z = 0; z < gridSize; ++z) {
+    for (int y = 0; y < gridSize; ++y) {
+        for (int x = 0; x < gridSize; ++x) {
+            vertices.push_back(vec3(x, y, z));
+        }
+    }
+}
+
+// Create the buffer
+GLuint vertexBuffer;
+glGenBuffers(1, &vertexBuffer);
+glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+
+}
 
 void generateVoxelMemory(GLuint* tex, GLsizei voxelResolution){
     glGenTextures(1, tex);
