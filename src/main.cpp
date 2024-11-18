@@ -40,6 +40,8 @@ typedef struct {
 
 pose campose;
 pose boxpose;
+GLfloat voxelResolution = 64.0;
+
 
 mat4 projectionMatrix;
 mat4 viewMatrix;
@@ -67,10 +69,11 @@ GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshader
 GLuint voxelmemory = 0;
 GLuint* voxelpointer = &voxelmemory;
 
-
-void createEmtpyVoxelVertices(){
-
+GLuint voxelvertexBuffer;
 std::vector<vec3> vertices;
+
+void createEmptyVoxelVertices(){
+
 
 int gridSize = 10;  // For a 10x10x10 grid
 for (int z = 0; z < gridSize; ++z) {
@@ -82,9 +85,8 @@ for (int z = 0; z < gridSize; ++z) {
 }
 
 // Create the buffer
-GLuint vertexBuffer;
-glGenBuffers(1, &vertexBuffer);
-glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+glGenBuffers(1, &voxelvertexBuffer);
+glBindBuffer(GL_ARRAY_BUFFER, voxelvertexBuffer);
 glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
 }
@@ -131,7 +133,7 @@ void init(void)
 	printError("GL inits");
 
 	// Load and compile shaders
-	plaintextureshader = loadShaders("src/plaintextureshader.vert", "src/plaintextureshader.frag");  // puts texture on teapot
+	plaintextureshader = loadShaders("src/plaintextureshader.vert", "src/raymarcher.frag");  // puts texture on teapot
 	lowpassshader = loadShaders("src/plaintextureshader.vert", "src/lowpass.frag");  // lowpass
 	lowpassshaderx = loadShaders("src/plaintextureshader.vert", "src/lowpass-x.frag");  // lowpass
 	lowpassshadery = loadShaders("src/plaintextureshader.vert", "src/lowpass-y.frag");  // lowpass
@@ -140,11 +142,11 @@ void init(void)
 	/*phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)*/
 
 	phongshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
-	voxelrender = loadShaders("src/renderVoxel.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
+	/*voxelrender = loadShaders("src/renderVoxel.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)*/
 
 	printError("init shader");
 
-    generateVoxelMemory(voxelpointer, 20);
+    generateVoxelMemory(voxelpointer, voxelResolution);
 
 	fbo1 = initFBO(initWidth, initHeight, 0);
 	fbo2 = initFBO(initWidth, initHeight, 0);
@@ -237,7 +239,6 @@ void display(void)
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
-    GLfloat voxelResolution = 20.0;
     vec3 lightSource = vec3(-0.24, 1.98, 0.16);
     for (int i = 0; model1[i] != NULL; i++)
     {
@@ -300,7 +301,7 @@ void reshape(GLsizei w, GLsizei h)
 	glViewport(0, 0, w, h);
 	GLfloat ratio = (GLfloat) w / (GLfloat) h;
 	/*projectionMatrix = perspective(100, ratio, 1.0, 1000);*/
-    float val = 50;
+    float val = 100;
     projectionMatrix = ortho(-val, val, -val, val, -val, val);
 }
 
