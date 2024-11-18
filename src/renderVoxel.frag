@@ -10,7 +10,7 @@ in vec4 position; // Phong (specular)
 uniform float voxelResolution;
 uniform float voxelMin;
 
-layout(r8) uniform image3D voxelMemory;
+layout uniform sampler3D voxelMemory;
 
 void main(void)
 {

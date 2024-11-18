@@ -12,6 +12,8 @@
 #define SURF_DIST .01
 
 out vec4 outColor;
+uniform sampler3D texUnit;
+uniform mat4 invOrtho;
 
 float sdBox( vec3 p, vec3 b)
 {
@@ -23,7 +25,7 @@ float GetDist(vec3 p) {
 	vec3 s = vec3(0, 1, 6);
        
     float planeDist = p.y;
-    float boxDist = sdBox(p - s, vec3(0.5));
+    float boxDist = sdBox(p - s, vec3(0.2));
     
     float d = min(boxDist, planeDist);
     //float d = planeDist;
@@ -43,29 +45,27 @@ float RayMarch(vec3 ro, vec3 rd) {
     return dO;
 }
 
-vec3 GetNormal(vec3 p) {
-	float d = GetDist(p);
-    vec2 e = vec2(.01, 0);
-    
-    vec3 n = d - vec3(
-        GetDist(p-e.xyy),
-        GetDist(p-e.yxy),
-        GetDist(p-e.yyx));
-    
-    return normalize(n);
-}
-
 void main()
 {
-    vec2 uv = (gl_FragCoord.xy  - .5*vec2(1920,1080))/1080.0;
-
-    vec3 col = vec3(0);
+    // vec2 uv = (gl_FragCoord.xy  - .5*vec2(1920,1080))/1080.0;
+    //
+    // vec3 col = vec3(0);
+    //
+    // vec3 ro = vec3(0, 1, 0);
+    // vec3 rd = normalize(vec3(uv.x, uv.y, 1));
+    //
+    // float d = RayMarch(ro, rd) / 20.0;
+    // col = vec3(d,d,d);
+    float z = 64;
+    vec4 voxelColor = vec4(0);
+    for (float i = 0; i < 64; i++){
+        // Sample in 3d from 0 -> texture size
+        float depth = i/64.0;
+        vec4 voxelBoolean = texture(texUnit, vec3(gl_FragCoord.xy/vec2(1920,1080), depth));
+        if (voxelBoolean.r > 0.1){
+            voxelColor = vec4(vec3(depth), 1.0);
+        }
+    }  
     
-    vec3 ro = vec3(0, 1, 0);
-    vec3 rd = normalize(vec3(uv.x, uv.y, 1));
-
-    float d = RayMarch(ro, rd) / 20.0;
-    col = vec3(d,d,d);
-    
-    outColor = vec4(col, 1.0);
+    outColor = voxelColor;
 }

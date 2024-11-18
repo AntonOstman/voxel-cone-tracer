@@ -42,7 +42,6 @@ pose campose;
 pose boxpose;
 GLfloat voxelResolution = 64.0;
 
-
 mat4 projectionMatrix;
 mat4 viewMatrix;
 
@@ -71,25 +70,6 @@ GLuint* voxelpointer = &voxelmemory;
 
 GLuint voxelvertexBuffer;
 std::vector<vec3> vertices;
-
-void createEmptyVoxelVertices(){
-
-
-int gridSize = 10;  // For a 10x10x10 grid
-for (int z = 0; z < gridSize; ++z) {
-    for (int y = 0; y < gridSize; ++y) {
-        for (int x = 0; x < gridSize; ++x) {
-            vertices.push_back(vec3(x, y, z));
-        }
-    }
-}
-
-// Create the buffer
-glGenBuffers(1, &voxelvertexBuffer);
-glBindBuffer(GL_ARRAY_BUFFER, voxelvertexBuffer);
-glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
-
-}
 
 void generateVoxelMemory(GLuint* tex, GLsizei voxelResolution){
     glGenTextures(1, tex);
@@ -204,6 +184,10 @@ void addBloom(FBOstruct *sceneFBO, FBOstruct *intermediateFBO, FBOstruct *fboOut
 }
 
 
+void march(){
+
+
+}
 
 //-------------------------------callback functions------------------------------------------
 void display(void)
@@ -240,6 +224,7 @@ void display(void)
 	glCullFace(GL_BACK);
 
     vec3 lightSource = vec3(-0.24, 1.98, 0.16);
+    glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);
     for (int i = 0; model1[i] != NULL; i++)
     {
         glUniform3fv(glGetUniformLocation(phongshader, "ka"), 1, &model1[i]->material->Ka.x);
@@ -288,12 +273,19 @@ void display(void)
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
 
+    glBindTexture(GL_TEXTURE_3D, voxelmemory);
+    glActiveTexture(GL_TEXTURE0);
+	glUniformMatrix4fv(glGetUniformLocation(plaintextureshader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);
+	glUniform1i(glGetUniformLocation(plaintextureshader, "texUnit"), 0);
+
     glUseProgram(plaintextureshader);
 
-	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, "in_TexCoord");
+	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, NULL);
 
 	glutSwapBuffers();
 }
+
+
 
 
 void reshape(GLsizei w, GLsizei h)
