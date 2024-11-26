@@ -5,7 +5,7 @@ in vec3 viewNormal; // Phong
 in vec3 worldNormal; // Phong (specular)
 in vec3 worldSurface; // Phong (specular)
 in vec3 viewSurface; // Phong (specular)
-in vec4 position; // Phong (specular)
+in vec4 position;
 
 uniform float voxelResolution;
 uniform float voxelMin;

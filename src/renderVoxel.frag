@@ -5,12 +5,12 @@ in vec3 viewNormal; // Phong
 in vec3 worldNormal; // Phong (specular)
 in vec3 worldSurface; // Phong (specular)
 in vec3 viewSurface; // Phong (specular)
-in vec4 position; // Phong (specular)
+in vec4 position;
 
 uniform float voxelResolution;
 uniform float voxelMin;
 
-layout uniform sampler3D voxelMemory;
+layout(r8) uniform image3D voxelMemory;
 
 void main(void)
 {
@@ -30,9 +30,12 @@ void main(void)
     // Race condition if too many threads are ran, 
     // but should not be a problem
 
-    imageStore(voxelMemory, ivec3(voxelcoord), vec4(1.0));
+    // imageStore(voxelMemory, ivec3(voxelcoord), vec4(1.0));
+    vec4 isvoxel = imageLoad(voxelMemory, ivec3(voxelcoord));
 	// outColor = normalize(gl_FragCoord - vec4(0,0, gl_FragCoord.z, 0));
 	// outColor = vec4((gl_FragCoord.x - 0.5) / 1080.0, (gl_FragCoord.y - 0.5) / 1080.0, 0.0, gl_FragCoord.w);
-	outColor = vec4(voxelcoord / voxelResolution);
+    if (isvoxel.x > 0.5){
+        outColor = vec4(voxelcoord / voxelResolution);
+    }
 	// outColor = vec4(1.0);
 }

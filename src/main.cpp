@@ -28,6 +28,7 @@ const int initWidth = 1080, initHeight = 1080;
 
 /*#define NUM_LIGHTS 4*/
 
+int inited = 0;
 typedef struct {
     float anglex;
     float angley;
@@ -101,6 +102,8 @@ void runfilter(GLuint shader, FBOstruct *in1, FBOstruct *in2, FBOstruct *out)
     glFlush();
 }
 
+void renderWorld(GLuint shader);
+
 void init(void)
 {
 	dumpInfo();  // shader info
@@ -122,7 +125,7 @@ void init(void)
 	/*phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)*/
 
 	phongshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
-	/*voxelrender = loadShaders("src/renderVoxel.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)*/
+	voxelrender = loadShaders("src/voxeliser.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
 	printError("init shader");
 
@@ -159,6 +162,9 @@ void init(void)
     campose.tz = 0;
 
 	viewMatrix = lookAtv(cam, point, up);
+
+    // Render to the voxelmemory
+    /*glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);*/
 }
 
 
@@ -184,19 +190,33 @@ void addBloom(FBOstruct *sceneFBO, FBOstruct *intermediateFBO, FBOstruct *fboOut
 }
 
 
-void march(){
+void initAfterOpenglContextStarted(){
+    if (inited == 1){
+        return;
+    }
 
-
+    renderWorld(phongshader);
+    inited = 1;
 }
 
-//-------------------------------callback functions------------------------------------------
-void display(void)
-{
-	// This function is called whenever it is time to render
-	// a new frame; due to the idle()-function below, this
-	// function will get called several times per second
+void checkTextureData() {
+    std::vector<GLubyte> data(voxelResolution * voxelResolution * voxelResolution);
+    glBindTexture(GL_TEXTURE_3D, voxelmemory);
+    glGetTexImage(GL_TEXTURE_3D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
+    
+    // Count non-zero values
+    int nonZeroCount = 0;
+    for (auto val : data) {
+        if (val > 0) nonZeroCount++;
+    }
+    
+    printf("Non-zero texture elements: %d out of %zu\n", 
+           nonZeroCount, data.size());
+}
 
-	// render to fbo1!
+// Render world to fbo1
+
+void renderWorld(GLuint shader){
 	useFBO(fbo1, 0L, 0L);
 
 	// Clear framebuffer & zbuffer
@@ -204,7 +224,7 @@ void display(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Activate shader program
-	glUseProgram(phongshader);
+	glUseProgram(shader);
 
     mat4 modelToWorldMatrix = Rx(boxpose.angley) * Rz(boxpose.anglez);
 	// Scale and place bunny since it is too small
@@ -212,27 +232,26 @@ void display(void)
     float scale = 15;
 	modelToWorldMatrix = modelToWorldMatrix * S(scale, scale, scale);
 
-	glUniformMatrix4fv(glGetUniformLocation(phongshader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
-	glUniformMatrix4fv(glGetUniformLocation(phongshader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-	glUniformMatrix4fv(glGetUniformLocation(phongshader, "worldMatrix"), 1, GL_TRUE, modelToWorldMatrix.m);
-	glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
+	glUniformMatrix4fv(glGetUniformLocation(shader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
+	glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+	glUniformMatrix4fv(glGetUniformLocation(shader, "worldMatrix"), 1, GL_TRUE, modelToWorldMatrix.m);
+	glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
 
 	// Enable Z-buffering
-	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
 	// Enable backface culling
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
+	/*glCullFace(GL_BACK);*/
 
     vec3 lightSource = vec3(-0.24, 1.98, 0.16);
-    glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);
     for (int i = 0; model1[i] != NULL; i++)
     {
-        glUniform3fv(glGetUniformLocation(phongshader, "ka"), 1, &model1[i]->material->Ka.x);
-        glUniform3fv(glGetUniformLocation(phongshader, "kd"), 1, &model1[i]->material->Kd.x);
-        glUniform3fv(glGetUniformLocation(phongshader, "ks"), 1, &model1[i]->material->Ks.x);
-        glUniform3fv(glGetUniformLocation(phongshader, "ke"), 1, &model1[i]->material->Ke.x);
-        glUniform3fv(glGetUniformLocation(phongshader, "lightSource"), 1, &lightSource.x);
-        glUniform1fv(glGetUniformLocation(phongshader, "voxelResolution"), 1, &voxelResolution);
+        glUniform3fv(glGetUniformLocation(shader, "ka"), 1, &model1[i]->material->Ka.x);
+        glUniform3fv(glGetUniformLocation(shader, "kd"), 1, &model1[i]->material->Kd.x);
+        glUniform3fv(glGetUniformLocation(shader, "ks"), 1, &model1[i]->material->Ks.x);
+        glUniform3fv(glGetUniformLocation(shader, "ke"), 1, &model1[i]->material->Ke.x);
+        glUniform3fv(glGetUniformLocation(shader, "lightSource"), 1, &lightSource.x);
+        glUniform1fv(glGetUniformLocation(shader, "voxelResolution"), 1, &voxelResolution);
     printError("uniforms");
 
         /*generateVoxelMemory(voxelpointer, 256);*/
@@ -242,15 +261,15 @@ void display(void)
         glBindImageTexture(0, voxelmemory, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R8);
     printError("bindvoxem memory");
 
-        GLint location = glGetUniformLocation(phongshader, "voxelTexture");
+        GLint location = glGetUniformLocation(shader, "voxelTexture");
         glUniform1i(location, 0); // Set the sampler to use texture unit 0
     printError("set voxel location");
 
-        DrawModel(model1[i], phongshader, "in_Position", NULL, NULL);
+        DrawModel(model1[i], shader, "in_Position", NULL, NULL);
     printError("Draw model error");
     }
 
-    /*DrawModel(squareModel, phongshader, "in_Position", NULL, NULL);*/
+    /*DrawModel(squareModel, shader, "in_Position", NULL, NULL);*/
 	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
 
 	/*glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.*/
@@ -267,20 +286,44 @@ void display(void)
     /*addBloom(fbo1, fbo2, fbo3, thresholdshader, lowpassshaderx, lowpassshadery, combineshader);*/
 	useFBO(0L, fbo1, 0L);
 	/*useFBO(0L, fbo3, 0L);*/
+    checkTextureData();
+}
+
+
+//-------------------------------callback functions------------------------------------------
+void display(void)
+{
+	// This function is called whenever it is time to render
+	// a new frame; due to the idle()-function below, this
+	// function will get called several times per second
+
+
+    glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);
+    renderWorld(phongshader);
+	// render to fbo1!
+    /*initAfterOpenglContextStarted();*/
 
 	glClearColor(0.0,0.0,0.0,0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
+    printError("clear error");
 
-    glBindTexture(GL_TEXTURE_3D, voxelmemory);
     glActiveTexture(GL_TEXTURE0);
-	glUniformMatrix4fv(glGetUniformLocation(plaintextureshader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);
-	glUniform1i(glGetUniformLocation(plaintextureshader, "texUnit"), 0);
+    glBindTexture(GL_TEXTURE_3D, voxelmemory);
+    printError("bind tex error");
+	/*glUniformMatrix4fv(glGetUniformLocation(plaintextureshader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);*/
+    GLuint location = glGetUniformLocation(plaintextureshader, "voxelTexture");
+    printError("location error ");
+	glUniform1i(location, 0);
+    printError("texunit error ");
 
     glUseProgram(plaintextureshader);
+    printError("use program error");
 
 	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, NULL);
+    printError("display error");
+
 
 	glutSwapBuffers();
 }
@@ -291,10 +334,12 @@ void display(void)
 void reshape(GLsizei w, GLsizei h)
 {
 	glViewport(0, 0, w, h);
-	GLfloat ratio = (GLfloat) w / (GLfloat) h;
+	/*GLfloat ratio = (GLfloat) w / (GLfloat) h;*/
 	/*projectionMatrix = perspective(100, ratio, 1.0, 1000);*/
-    float val = 100;
-    projectionMatrix = ortho(-val, val, -val, val, -val, val);
+    float right = 40;
+    float left = 40;
+    float back = 50;
+    projectionMatrix = ortho(-right, right, -left, left, -back, back);
 }
 
 // Trackball

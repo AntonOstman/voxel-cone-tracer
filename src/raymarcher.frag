@@ -1,3 +1,4 @@
+// This code takes inspiration from the below source
 // "ShaderToy Tutorial - Ray Marching for Dummies!" 
 // by Martijn Steinrucken aka BigWings/CountFrolic - 2018
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -12,8 +13,9 @@
 #define SURF_DIST .01
 
 out vec4 outColor;
-uniform sampler3D texUnit;
+uniform sampler3D voxelTexture;
 uniform mat4 invOrtho;
+uniform mat4 worldMatrix;
 
 float sdBox( vec3 p, vec3 b)
 {
@@ -58,14 +60,16 @@ void main()
     // col = vec3(d,d,d);
     float z = 64;
     vec4 voxelColor = vec4(0);
+    float found_voxel = 0;
     for (float i = 0; i < 64; i++){
         // Sample in 3d from 0 -> texture size
-        float depth = i/64.0;
-        vec4 voxelBoolean = texture(texUnit, vec3(gl_FragCoord.xy/vec2(1920,1080), depth));
+        float depth = i / 64.0;
+        vec4 voxelBoolean = texture(voxelTexture, vec3((gl_FragCoord.xy)/vec2(1920,1080), depth));
         if (voxelBoolean.r > 0.1){
-            voxelColor = vec4(vec3(depth), 1.0);
+            voxelColor += (1.0 - found_voxel) * vec4(vec3(depth), 1.0);
+            found_voxel = 1.0;
         }
-    }  
+    }
     
     outColor = voxelColor;
 }
