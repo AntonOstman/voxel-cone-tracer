@@ -158,7 +158,7 @@ void init(void)
     boxpose.anglez = 0;
     boxpose.tx = 0;
     boxpose.ty = -9.5 - 0.8*4;
-    boxpose.tz = -8.0;
+    boxpose.tz = -1.0;
 
     campose.anglex = 0;
     campose.angley = 0;
@@ -243,9 +243,9 @@ GLuint voxelvbo;
 GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolution, std::vector<vec3> &positions) {
 
     // Extract non-zero voxel positions
-    for (int z = 0; z < voxelResolution; ++z) {
-        for (int y = 0; y < voxelResolution; ++y) {
-            for (int x = 0; x < voxelResolution; ++x) {
+    for (int z = 0; z < voxelResolution; z++) {
+        for (int y = 0; y < voxelResolution; y++) {
+            for (int x = 0; x < voxelResolution; x++) {
                 int flatIndex = (z * voxelResolution * voxelResolution + y * voxelResolution + x) * 4;
 
                 // Check if the voxel is non-zero (any RGBA component > 0)
@@ -258,6 +258,7 @@ GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolu
                         (float)y / voxelResolution, 
                         (float)z / voxelResolution
                     );
+                    printf("x %d y %d z %d\n", x,y,z);
 
                     positions.push_back(position);
                 }
@@ -291,13 +292,13 @@ void renderPoints(){
 	glClearColor(0.2,0.2,0.5,0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glBindBuffer(GL_ARRAY_SIZE, voxelvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, voxelvbo);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
     glPointSize(5.0f); // Set point size to 5 pixels
-    glDrawArrays(GL_POINTS, 0, positions.size());
     setUniforms(plainshader);
+    glDrawArrays(GL_POINTS, 0, positions.size());
 
-	/*glDrawElements(GL_POINTS, positions.size() * sizeof(vec3), positions.data());*/
 
 }
 
@@ -417,8 +418,6 @@ void display(void)
     /*renderToQuad();*/
     renderPoints();
 
-
-
 	glutSwapBuffers();
 }
 
@@ -429,12 +428,20 @@ void reshape(GLsizei w, GLsizei h)
 {
 	glViewport(0, 0, w, h);
 	GLfloat ratio = (GLfloat) w / (GLfloat) h;
+
 	/*projectionMatrix = perspective(100, ratio, 1.0, 1000);*/
-    float right = 40;
-    float left = 40;
-    float front = 10;
-    float back = 80;
-    projectionMatrix = ortho(-right, right, -left, left, -front, back);
+
+    /*float right = 20;*/
+    /*float left = 20;*/
+    /*float front = 40;*/
+    /*float back = 40;*/
+    GLfloat left = -20; 
+    GLfloat right = 20;
+    GLfloat bottom = -20; 
+    GLfloat top = 20; 
+    GLfloat near = -20; 
+    GLfloat far = 50;
+    projectionMatrix = ortho(left, right, bottom, top, near, far);
 }
 
 // Trackball
