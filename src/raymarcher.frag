@@ -65,8 +65,8 @@ void main()
         // Sample in 3d from 0 -> texture size
         float depth = i / 64.0;
         vec4 voxelBoolean = texture(voxelTexture, vec3((gl_FragCoord.xy)/vec2(1920,1080), depth));
-        if (voxelBoolean.r > 0.1){
-            voxelColor += (1.0 - found_voxel) * vec4(vec3(depth), 1.0);
+        if (voxelBoolean.a > 0.1){
+            voxelColor += (1.0 - found_voxel) * vec4(vec3(voxelBoolean * (1.0 - depth)), 1.0);
             found_voxel = 1.0;
         }
     }

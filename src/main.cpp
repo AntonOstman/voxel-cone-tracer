@@ -75,7 +75,7 @@ std::vector<vec3> vertices;
 void generateVoxelMemory(GLuint* tex, GLsizei voxelResolution){
     glGenTextures(1, tex);
     glBindTexture(GL_TEXTURE_3D, *tex);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, voxelResolution, voxelResolution, voxelResolution, 0, GL_RED,  GL_BYTE, nullptr);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, voxelResolution, voxelResolution, voxelResolution, 0, GL_RED,  GL_BYTE, nullptr);
     printError("glteximage3d");
 
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -258,7 +258,7 @@ void renderWorld(GLuint shader){
         glActiveTexture(GL_TEXTURE0);
         /*glBindImageTexture(GL_TEXTURE_3D, voxelmemory);*/
         /*glTexImage3D(*tex, 0, GL_R8, voxelResolution, voxelResolution, voxelResolution, 0, GL_RED, GL_TEXTURE_3D, nullptr);*/
-        glBindImageTexture(0, voxelmemory, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R8);
+        glBindImageTexture(0, voxelmemory, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
     printError("bindvoxem memory");
 
         GLint location = glGetUniformLocation(shader, "voxelTexture");
@@ -338,8 +338,9 @@ void reshape(GLsizei w, GLsizei h)
 	/*projectionMatrix = perspective(100, ratio, 1.0, 1000);*/
     float right = 40;
     float left = 40;
-    float back = 50;
-    projectionMatrix = ortho(-right, right, -left, left, -back, back);
+    float front = 10;
+    float back = 80;
+    projectionMatrix = ortho(-right, right, -left, left, -front, back);
 }
 
 // Trackball

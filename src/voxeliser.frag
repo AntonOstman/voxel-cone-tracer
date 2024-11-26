@@ -7,20 +7,42 @@ in vec3 worldSurface; // Phong (specular)
 in vec3 viewSurface; // Phong (specular)
 in vec4 position;
 
+uniform vec3 ka;
+uniform vec3 ke;
+uniform vec3 kd;
+uniform vec3 ks;
+
+uniform vec3 lightSource;
+uniform mat4 worldMatrix;
+uniform mat4 viewMatrix;
+
 uniform float voxelResolution;
 uniform float voxelMin;
 
-layout(r8) uniform image3D voxelMemory;
+layout(rgba8) uniform image3D voxelMemory;
 
 void main(void)
 {
 
-    // TODO same for all, should be done on cpu 
-	// vec3 light = viewSurface; // Light position in view
-	// vec3 light = vec3(mat3(modelviewMatrix) * vec4(lightSource - viewSurface, 1.0));
+    // Voxel coloring
+	vec3 lightIncident = normalize(mat3(viewMatrix) * (lightSource - worldSurface));
+
+	float diffuse, specular;
+	// Diffuse
+	diffuse = dot(normalize(viewNormal), lightIncident);
+	diffuse = max(0.0, diffuse); // No negative light
+	
+	// Specular
+	vec3 r = reflect(-lightIncident, normalize(viewNormal));
+	vec3 v = normalize(-viewSurface); // View direction
+	specular = dot(r, v);
+	if (specular > 0.0)
+		specular = 1.0 * pow(specular, 150.0);
+	specular = max(specular, 0.0);
+	specular = min(specular, 1.0);
+	vec3 shade = kd*diffuse + ks*specular + ka / 5.0 + ke;
 
     // Voxelising
-
     // scale [-1, 1] to [0, 1]
     vec4 textureCoords = 0.5 * position + 0.5;
     
@@ -30,7 +52,7 @@ void main(void)
     // Race condition if too many threads are ran, 
     // but should not be a problem
 
-    imageStore(voxelMemory, ivec3(voxelcoord), vec4(1.0));
+    imageStore(voxelMemory, ivec3(voxelcoord), vec4(shade, 1.0));
     vec4 isvoxel = imageLoad(voxelMemory, ivec3(voxelcoord));
 	// outColor = normalize(gl_FragCoord - vec4(0,0, gl_FragCoord.z, 0));
 	// outColor = vec4((gl_FragCoord.x - 0.5) / 1080.0, (gl_FragCoord.y - 0.5) / 1080.0, 0.0, gl_FragCoord.w);
