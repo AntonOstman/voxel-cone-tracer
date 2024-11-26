@@ -66,7 +66,10 @@ Model* squareModel;
 Model **model1;
 FBOstruct *fbo1, *fbo2, *fbo3;
 GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshadery = 0, lowpassshaderx = 0, thresholdshader = 0, combineshader = 0, voxeliser = 0, voxelrender = 0;
+GLuint voxelisingshader = 0;
 GLuint voxelmemory = 0;
+GLuint plainshader = 0;
+GLuint raymarchershader = 0;
 GLuint* voxelpointer = &voxelmemory;
 
 GLuint voxelvertexBuffer;
@@ -117,14 +120,17 @@ void init(void)
 
 	// Load and compile shaders
 	plaintextureshader = loadShaders("src/plaintextureshader.vert", "src/raymarcher.frag");  // puts texture on teapot
+	plainshader = loadShaders("src/plainshader.vert", "src/plainshader.frag");  // puts texture on teapot
+	raymarchershader = loadShaders("src/plaintextureshader.vert", "src/raymarcher.frag");  // puts texture on teapot
 	lowpassshader = loadShaders("src/plaintextureshader.vert", "src/lowpass.frag");  // lowpass
 	lowpassshaderx = loadShaders("src/plaintextureshader.vert", "src/lowpass-x.frag");  // lowpass
 	lowpassshadery = loadShaders("src/plaintextureshader.vert", "src/lowpass-y.frag");  // lowpass
 	thresholdshader = loadShaders("src/plaintextureshader.vert", "src/threshold.frag");  // threshold
 	combineshader = loadShaders("src/plaintextureshader.vert", "src/combine.frag");  // threshold
-	/*phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)*/
+	phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)
 
-	phongshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
+	/*phongshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)*/
+	voxelisingshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
 	voxelrender = loadShaders("src/voxeliser.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
 	printError("init shader");
@@ -189,20 +195,38 @@ void addBloom(FBOstruct *sceneFBO, FBOstruct *intermediateFBO, FBOstruct *fboOut
    runfilter(combiningshader, sceneFBO, intermediateFBO, fboOut);
 }
 
-
+GLuint createVoxelVertexBuffer(const std::vector<GLubyte>& data, int voxelResolution, std::vector<vec3> &positions);
+std::vector<vec3> positions;
 void initAfterOpenglContextStarted(){
     if (inited == 1){
         return;
     }
 
-    renderWorld(phongshader);
+    renderWorld(voxelisingshader);
+
+    std::vector<GLubyte> data(4 * voxelResolution * voxelResolution * voxelResolution);
+    glBindTexture(GL_TEXTURE_3D, voxelmemory);
+    glGetTexImage(GL_TEXTURE_3D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+    printError("error loading 3d tex");
+    
+    // Count non-zero values
+    int nonZeroCount = 0;
+    for (auto val : data) {
+        if (val > 0) nonZeroCount++;
+    }
+    
+    printf("Non-zero texture elements: %d out of %zu\n", 
+           nonZeroCount, data.size());
+
+    createVoxelVertexBuffer(data, voxelResolution, positions);
     inited = 1;
 }
 
 void checkTextureData() {
-    std::vector<GLubyte> data(voxelResolution * voxelResolution * voxelResolution);
+    std::vector<GLubyte> data(4 * voxelResolution * voxelResolution * voxelResolution);
     glBindTexture(GL_TEXTURE_3D, voxelmemory);
-    glGetTexImage(GL_TEXTURE_3D, 0, GL_RED, GL_UNSIGNED_BYTE, data.data());
+    glGetTexImage(GL_TEXTURE_3D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+    printError("error loading 3d tex");
     
     // Count non-zero values
     int nonZeroCount = 0;
@@ -214,17 +238,70 @@ void checkTextureData() {
            nonZeroCount, data.size());
 }
 
+
+GLuint voxelvbo;
+GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolution, std::vector<vec3> &positions) {
+
+    // Extract non-zero voxel positions
+    for (int z = 0; z < voxelResolution; ++z) {
+        for (int y = 0; y < voxelResolution; ++y) {
+            for (int x = 0; x < voxelResolution; ++x) {
+                int flatIndex = (z * voxelResolution * voxelResolution + y * voxelResolution + x) * 4;
+
+                // Check if the voxel is non-zero (any RGBA component > 0)
+                if (data[flatIndex] > 0 || data[flatIndex + 1] > 0 ||
+                    data[flatIndex + 2] > 0 || data[flatIndex + 3] > 0) {
+                    
+                    // Convert (x, y, z) to normalized or world space (optional)
+                    vec3 position = vec3(
+                        (float)x / voxelResolution, 
+                        (float)y / voxelResolution, 
+                        (float)z / voxelResolution
+                    );
+
+                    positions.push_back(position);
+                }
+            }
+        }
+    }
+
+    // Create VBO
+    glGenBuffers(1, &voxelvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, voxelvbo);
+
+    // Upload positions to GPU
+    glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(vec3), positions.data(), GL_STATIC_DRAW);
+
+    // Unbind the buffer
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    printf("Created voxelvbo with %zu non-zero voxels.\n", positions.size());
+    return voxelvbo;
+}
+
+
+
 // Render world to fbo1
+void setUniforms(GLuint shader);
 
-void renderWorld(GLuint shader){
-	useFBO(fbo1, 0L, 0L);
+void renderPoints(){
 
-	// Clear framebuffer & zbuffer
+	glUseProgram(plainshader);
+
 	glClearColor(0.2,0.2,0.5,0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Activate shader program
-	glUseProgram(shader);
+    glBindBuffer(GL_ARRAY_SIZE, voxelvbo);
+    glEnableVertexAttribArray(0);
+    glPointSize(5.0f); // Set point size to 5 pixels
+    glDrawArrays(GL_POINTS, 0, positions.size());
+    setUniforms(plainshader);
+
+	/*glDrawElements(GL_POINTS, positions.size() * sizeof(vec3), positions.data());*/
+
+}
+
+void setUniforms(GLuint shader){
 
     mat4 modelToWorldMatrix = Rx(boxpose.angley) * Rz(boxpose.anglez);
 	// Scale and place bunny since it is too small
@@ -236,6 +313,18 @@ void renderWorld(GLuint shader){
 	glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(shader, "worldMatrix"), 1, GL_TRUE, modelToWorldMatrix.m);
 	glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
+}
+
+void renderWorld(GLuint shader){
+	useFBO(fbo1, 0L, 0L);
+
+	// Clear framebuffer & zbuffer
+	glClearColor(0.2,0.2,0.5,0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Activate shader program
+	glUseProgram(shader);
+    setUniforms(shader);
 
 	// Enable Z-buffering
 	glDisable(GL_DEPTH_TEST);
@@ -291,17 +380,10 @@ void renderWorld(GLuint shader){
 
 
 //-------------------------------callback functions------------------------------------------
-void display(void)
-{
-	// This function is called whenever it is time to render
-	// a new frame; due to the idle()-function below, this
-	// function will get called several times per second
-
-
-    glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);
-    renderWorld(phongshader);
+void renderToQuad(){
+    /*glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);*/
+    /*renderWorld(phongshader);*/
 	// render to fbo1!
-    /*initAfterOpenglContextStarted();*/
 
 	glClearColor(0.0,0.0,0.0,0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -312,17 +394,29 @@ void display(void)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, voxelmemory);
     printError("bind tex error");
-	/*glUniformMatrix4fv(glGetUniformLocation(plaintextureshader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);*/
-    GLuint location = glGetUniformLocation(plaintextureshader, "voxelTexture");
+	glUniformMatrix4fv(glGetUniformLocation(raymarchershader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);
+    GLuint location = glGetUniformLocation(raymarchershader, "voxelTexture");
     printError("location error ");
-	glUniform1i(location, 0);
+    glUniform1i(location, 0);
     printError("texunit error ");
 
-    glUseProgram(plaintextureshader);
-    printError("use program error");
+	glUseProgram(raymarchershader);
+	printError("use program error");
 
-	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, NULL);
-    printError("display error");
+	DrawModel(squareModel, raymarchershader, "in_Position", NULL, NULL);
+	printError("display error");
+
+}
+void display(void)
+{
+	// This function is called whenever it is time to render
+	// a new frame; due to the idle()-function below, this
+	// function will get called several times per second
+
+    initAfterOpenglContextStarted();
+    /*renderToQuad();*/
+    renderPoints();
+
 
 
 	glutSwapBuffers();
@@ -334,7 +428,7 @@ void display(void)
 void reshape(GLsizei w, GLsizei h)
 {
 	glViewport(0, 0, w, h);
-	/*GLfloat ratio = (GLfloat) w / (GLfloat) h;*/
+	GLfloat ratio = (GLfloat) w / (GLfloat) h;
 	/*projectionMatrix = perspective(100, ratio, 1.0, 1000);*/
     float right = 40;
     float left = 40;

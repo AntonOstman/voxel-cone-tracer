@@ -56,7 +56,7 @@ void main(void)
     vec4 isvoxel = imageLoad(voxelMemory, ivec3(voxelcoord));
 	// outColor = normalize(gl_FragCoord - vec4(0,0, gl_FragCoord.z, 0));
 	// outColor = vec4((gl_FragCoord.x - 0.5) / 1080.0, (gl_FragCoord.y - 0.5) / 1080.0, 0.0, gl_FragCoord.w);
-    if (isvoxel.x > 0.5){
+    if (isvoxel.x > 0.5) {
         outColor = vec4(voxelcoord / voxelResolution);
     }
 	// outColor = vec4(1.0);
