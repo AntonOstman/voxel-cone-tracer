@@ -121,7 +121,7 @@ void init(void)
 	printError("GL inits");
 
 	// Load and compile shaders
-	plaintextureshader = loadShaders("src/plaintextureshader.vert", "src/raymarcher.frag");  // puts texture on teapot
+	plaintextureshader = loadShaders("src/plaintextureshader.vert", "src/plaintextureshader.frag");  // puts texture on teapot
 	plainshader = loadShaders("src/plainshader.vert", "src/plainshader.frag");  // puts texture on teapot
 	raymarchershader = loadShaders("src/plaintextureshader.vert", "src/raymarcher.frag");  // puts texture on teapot
 	lowpassshader = loadShaders("src/plaintextureshader.vert", "src/lowpass.frag");  // lowpass
@@ -399,7 +399,7 @@ void renderWorld(GLuint shader){
 
 
 //-------------------------------callback functions------------------------------------------
-void renderToQuad(){
+void renderToQuad(GLuint shader){
     /*glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);*/
     /*renderWorld(phongshader);*/
 	// render to fbo1!
@@ -413,16 +413,16 @@ void renderToQuad(){
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, voxelmemory);
     printError("bind tex error");
-	glUniformMatrix4fv(glGetUniformLocation(raymarchershader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);
-    GLuint location = glGetUniformLocation(raymarchershader, "voxelTexture");
+	glUniformMatrix4fv(glGetUniformLocation(shader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);
+    GLuint location = glGetUniformLocation(shader, "voxelTexture");
     printError("location error ");
     glUniform1i(location, 0);
     printError("texunit error ");
 
-	glUseProgram(raymarchershader);
+	glUseProgram(shader);
 	printError("use program error");
 
-	DrawModel(squareModel, raymarchershader, "in_Position", NULL, NULL);
+	DrawModel(squareModel, shader, "in_Position", NULL, NULL);
 	printError("display error");
 
 }
@@ -433,7 +433,7 @@ void display(void)
 	// function will get called several times per second
 
     initAfterOpenglContextStarted();
-    /*renderToQuad();*/
+    /*renderToQuad(raymarchershader);*/
     renderPoints(geometry);
 
 	glutSwapBuffers();
