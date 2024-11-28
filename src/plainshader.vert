@@ -7,6 +7,7 @@ out vec3 worldNormal;
 out vec3 viewSurface; 
 out vec3 worldSurface; 
 
+uniform float voxelSize;
 uniform mat4 worldMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
@@ -20,5 +21,5 @@ void main(void)
 	viewSurface = vec3(modelviewMatrix * vec4(in_Position, 1.0)); // Don't include projection here - we only want to go to view coordinates
 	worldSurface = vec3(worldMatrix * vec4(in_Position, 1.0)); // Don't include projection here - we only want to go to view coordinates
 
-	gl_Position = projectionMatrix * modelviewMatrix * vec4(in_Position, 1.0); // This should include projection
+	gl_Position = vec4(in_Position, 1.0); // This should include projection
 }

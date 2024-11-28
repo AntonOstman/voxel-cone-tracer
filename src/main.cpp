@@ -42,6 +42,7 @@ typedef struct {
 pose campose;
 pose boxpose;
 GLfloat voxelResolution = 64.0;
+GLfloat voxelSize = 2;
 
 mat4 projectionMatrix;
 mat4 viewMatrix;
@@ -69,6 +70,7 @@ GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshader
 GLuint voxelisingshader = 0;
 GLuint voxelmemory = 0;
 GLuint plainshader = 0;
+GLuint geometry = 0;
 GLuint raymarchershader = 0;
 GLuint* voxelpointer = &voxelmemory;
 
@@ -133,7 +135,9 @@ void init(void)
 	voxelisingshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
 	voxelrender = loadShaders("src/voxeliser.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
-	printError("init shader");
+    geometry = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/cube.geom");
+
+	printError("shader compilation error");
 
     generateVoxelMemory(voxelpointer, voxelResolution);
 
@@ -254,11 +258,11 @@ GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolu
                     
                     // Convert (x, y, z) to normalized or world space (optional)
                     vec3 position = vec3(
-                        (float)x / voxelResolution, 
-                        (float)y / voxelResolution, 
-                        (float)z / voxelResolution
+                        (float)x / voxelResolution * voxelSize, 
+                        (float)y / voxelResolution * voxelSize, 
+                        (float)z / voxelResolution * voxelSize
                     );
-                    printf("x %d y %d z %d\n", x,y,z);
+                    /*printf("x %d y %d z %d\n", x,y,z);*/
 
                     positions.push_back(position);
                 }
@@ -285,9 +289,10 @@ GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolu
 // Render world to fbo1
 void setUniforms(GLuint shader);
 
-void renderPoints(){
+void renderPoints(GLuint shader){
 
-	glUseProgram(plainshader);
+	glEnable(GL_DEPTH_TEST);
+	glUseProgram(shader);
 
 	glClearColor(0.2,0.2,0.5,0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -296,7 +301,7 @@ void renderPoints(){
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
     glPointSize(5.0f); // Set point size to 5 pixels
-    setUniforms(plainshader);
+    setUniforms(shader);
     glDrawArrays(GL_POINTS, 0, positions.size());
 
 
@@ -313,7 +318,20 @@ void setUniforms(GLuint shader){
 	glUniformMatrix4fv(glGetUniformLocation(shader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(shader, "worldMatrix"), 1, GL_TRUE, modelToWorldMatrix.m);
-	glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
+	glUniformMatrix4fv(glGetUniformLocation(shader, "mvp"), 1, GL_TRUE, (projectionMatrix * viewMatrix * modelToWorldMatrix).m);
+	/*glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);*/
+    glUniform1fv(glGetUniformLocation(shader, "voxelSize"), 1, &voxelSize);
+    glUniform1fv(glGetUniformLocation(shader, "voxelResolution"), 1, &voxelResolution);
+
+    glActiveTexture(GL_TEXTURE0);
+    /*glBindImageTexture(GL_TEXTURE_3D, voxelmemory);*/
+        /*glTexImage3D(*tex, 0, GL_R8, voxelResolution, voxelResolution, voxelResolution, 0, GL_RED, GL_TEXTURE_3D, nullptr);*/
+    glBindImageTexture(0, voxelmemory, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+    printError("bindvoxem memory");
+
+    GLint location = glGetUniformLocation(shader, "voxelTexture");
+    glUniform1i(location, 0); // Set the sampler to use texture unit 0
+    printError("set voxel location");
 }
 
 void renderWorld(GLuint shader){
@@ -416,12 +434,10 @@ void display(void)
 
     initAfterOpenglContextStarted();
     /*renderToQuad();*/
-    renderPoints();
+    renderPoints(geometry);
 
 	glutSwapBuffers();
 }
-
-
 
 
 void reshape(GLsizei w, GLsizei h)
@@ -484,6 +500,7 @@ void mouseDragged(int x, int y)
 	
 	glutPostRedisplay();
 }
+
 unsigned char prev_key;
 
 void translate(float x, float y, float z, mat4* matrix){
