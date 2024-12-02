@@ -10,7 +10,7 @@ uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform float voxelResolution;
 uniform float voxelSize;
-uniform mat4 mvp;
+// uniform mat4 mvp;
 
 out vec4 worldPosition; 
 
@@ -32,17 +32,20 @@ void main() {
         pos2.xyz = pos2.xzy;
         pos3.xyz = pos3.xzy;
     }
+    pos1.z = 0;
+    pos2.z = 0;
+    pos3.z = 0;
 
     worldPosition = gl_in[0].gl_Position;
-    gl_Position = mvp * vec4(pos1, gl_in[0].gl_Position.w);
+    gl_Position = vec4(pos1, 1);
     EmitVertex();
 
     worldPosition = gl_in[1].gl_Position;
-    gl_Position = mvp * vec4(pos2, gl_in[1].gl_Position.w);
+    gl_Position = vec4(pos2, 1);
     EmitVertex();
 
     worldPosition = gl_in[2].gl_Position;
-    gl_Position = mvp * vec4(pos3, gl_in[2].gl_Position.w);
+    gl_Position = vec4(pos3, 1);
     EmitVertex();
     EndPrimitive();
 }

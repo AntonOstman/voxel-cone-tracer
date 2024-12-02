@@ -291,9 +291,9 @@ void setUniforms(GLuint shader);
 
 void renderPoints(GLuint shader){
 
-	/*glEnable(GL_CULL_FACE);*/
-	/*glCullFace(GL_BACK);*/
-	/*glEnable(GL_DEPTH_TEST);*/
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glEnable(GL_DEPTH_TEST);
 	glUseProgram(shader);
 
 	glClearColor(0.2,0.2,0.5,0);
@@ -387,8 +387,10 @@ void renderVoxelTexture(GLuint shader){
 
 	glClearColor(0.0,0.0,0.0,0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
+
     printError("clear error");
 
     glActiveTexture(GL_TEXTURE0);
@@ -422,8 +424,8 @@ void renderWithoutVoxels(GLuint shader){
 	// Enable Z-buffering
 	glEnable(GL_DEPTH_TEST);
 	// Enable backface culling
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
+	/*glCullFace(GL_BACK);*/
 
     vec3 lightSource = vec3(-0.24, 1.98, 0.16);
     for (int i = 0; model1[i] != NULL; i++)
@@ -467,10 +469,10 @@ void reshape(GLsizei w, GLsizei h)
     /*float front = 40;*/
     /*float back = 40;*/
     GLfloat left = -20; 
-    GLfloat right = 40;
+    GLfloat right = 25;
     GLfloat bottom = -20; 
-    GLfloat top = 30; 
-    GLfloat near = -10; 
+    GLfloat top = 20; 
+    GLfloat near = -20; 
     GLfloat far = 50;
     projectionMatrix = ortho(left, right, bottom, top, near, far);
 }
