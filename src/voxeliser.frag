@@ -5,7 +5,7 @@ in vec3 viewNormal; // Phong
 in vec3 worldNormal; // Phong (specular)
 in vec3 worldSurface; // Phong (specular)
 in vec3 viewSurface; // Phong (specular)
-in vec4 position;
+in vec4 worldPosition;
 
 uniform vec3 ka;
 uniform vec3 ke;
@@ -44,7 +44,7 @@ void main(void)
 
     // Voxelising
     // scale [-1, 1] to [0, 1]
-    vec4 textureCoords = 0.5 * position + 0.5;
+    vec4 textureCoords = 0.5 * worldPosition + 0.5;
     
     // Convert to voxel coordinates
     ivec4 voxelcoord = ivec4((textureCoords) * voxelResolution);

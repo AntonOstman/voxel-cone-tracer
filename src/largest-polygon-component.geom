@@ -10,8 +10,9 @@ uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform float voxelResolution;
 uniform float voxelSize;
+uniform mat4 mvp;
 
-out vec3 fragCoords; 
+out vec4 worldPosition; 
 
 void main() {
     // Define the 8 corners of the cube relative to the center
@@ -31,14 +32,17 @@ void main() {
         pos2.xyz = pos2.xzy;
         pos3.xyz = pos3.xzy;
     }
-    gl_Position = vec4(pos1, gl_in[0].gl_Position.w);
-    fragCoords = gl_Position;
+
+    worldPosition = gl_in[0].gl_Position;
+    gl_Position = mvp * vec4(pos1, gl_in[0].gl_Position.w);
     EmitVertex();
-    gl_Position = vec4(pos2, gl_in[1].gl_Position.w);
-    fragCoords = gl_Position;
+
+    worldPosition = gl_in[1].gl_Position;
+    gl_Position = mvp * vec4(pos2, gl_in[1].gl_Position.w);
     EmitVertex();
-    gl_Position = vec4(pos3, gl_in[2].gl_Position.w);
-    fragCoords = gl_Position;
+
+    worldPosition = gl_in[2].gl_Position;
+    gl_Position = mvp * vec4(pos3, gl_in[2].gl_Position.w);
     EmitVertex();
     EndPrimitive();
 }

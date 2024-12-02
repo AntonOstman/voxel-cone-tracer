@@ -133,7 +133,7 @@ void init(void)
 	combineshader = loadShaders("src/plaintextureshader.vert", "src/combine.frag");  // threshold
 	phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)
 
-	voxelisingshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
+	voxelisingshader = loadShadersG("src/voxeliser.vert", "src/voxeliser.frag", "src/largest-polygon-component.geom");  // renders with light (used for initial renderin of teapot)
 	voxelrender = loadShaders("src/voxeliser.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
     geometry = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/cube.geom");
@@ -346,8 +346,8 @@ void renderWorld(GLuint shader){
     setUniforms(shader);
 
 	// Enable Z-buffering
-	glDisable(GL_DEPTH_TEST);
 	// Enable backface culling
+	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	/*glCullFace(GL_BACK);*/
 
@@ -449,7 +449,7 @@ void display(void)
     initAfterOpenglContextStarted();
     /*renderVoxelTexture(raymarchershader);*/
     renderPoints(geometry);
-    renderWithoutVoxels(phongshader);
+    /*renderWithoutVoxels(phongshader);*/
 
 	glutSwapBuffers();
 }
@@ -467,10 +467,10 @@ void reshape(GLsizei w, GLsizei h)
     /*float front = 40;*/
     /*float back = 40;*/
     GLfloat left = -20; 
-    GLfloat right = 20;
+    GLfloat right = 40;
     GLfloat bottom = -20; 
-    GLfloat top = 20; 
-    GLfloat near = -20; 
+    GLfloat top = 30; 
+    GLfloat near = -10; 
     GLfloat far = 50;
     projectionMatrix = ortho(left, right, bottom, top, near, far);
 }
