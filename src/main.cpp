@@ -68,9 +68,11 @@ Model **model1;
 FBOstruct *fbo1, *fbo2, *fbo3;
 GLuint phongshader = 0, plaintextureshader = 0, lowpassshader = 0, lowpassshadery = 0, lowpassshaderx = 0, thresholdshader = 0, combineshader = 0, voxeliser = 0, voxelrender = 0;
 GLuint voxelisingshader = 0;
+GLuint phong_largets_comp_shader = 0;
 GLuint voxelmemory = 0;
 GLuint plainshader = 0;
 GLuint geometry = 0;
+GLuint outline = 0;
 GLuint raymarchershader = 0;
 GLuint* voxelpointer = &voxelmemory;
 
@@ -131,11 +133,12 @@ void init(void)
 	combineshader = loadShaders("src/plaintextureshader.vert", "src/combine.frag");  // threshold
 	phongshader = loadShaders("src/phong.vert", "src/phong.frag");  // renders with light (used for initial renderin of teapot)
 
-	/*phongshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)*/
 	voxelisingshader = loadShaders("src/voxeliser.vert", "src/voxeliser.frag");  // renders with light (used for initial renderin of teapot)
 	voxelrender = loadShaders("src/voxeliser.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
     geometry = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/cube.geom");
+    outline = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/outline.geom");
+	phong_largets_comp_shader = loadShadersG("src/phong.vert", "src/phong.frag", "src/largest-polygon-component.geom");  // renders with light (used for initial renderin of teapot)
 
 	printError("shader compilation error");
 
@@ -172,9 +175,6 @@ void init(void)
     campose.tz = 0;
 
 	viewMatrix = lookAtv(cam, point, up);
-
-    // Render to the voxelmemory
-    /*glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);*/
 }
 
 
@@ -291,7 +291,9 @@ void setUniforms(GLuint shader);
 
 void renderPoints(GLuint shader){
 
-	glEnable(GL_DEPTH_TEST);
+	/*glEnable(GL_CULL_FACE);*/
+	/*glCullFace(GL_BACK);*/
+	/*glEnable(GL_DEPTH_TEST);*/
 	glUseProgram(shader);
 
 	glClearColor(0.2,0.2,0.5,0);
@@ -303,7 +305,6 @@ void renderPoints(GLuint shader){
     glPointSize(5.0f); // Set point size to 5 pixels
     setUniforms(shader);
     glDrawArrays(GL_POINTS, 0, positions.size());
-
 
 }
 
@@ -335,7 +336,6 @@ void setUniforms(GLuint shader){
 }
 
 void renderWorld(GLuint shader){
-	useFBO(fbo1, 0L, 0L);
 
 	// Clear framebuffer & zbuffer
 	glClearColor(0.2,0.2,0.5,0);
@@ -377,31 +377,12 @@ void renderWorld(GLuint shader){
     printError("Draw model error");
     }
 
-    /*DrawModel(squareModel, shader, "in_Position", NULL, NULL);*/
-	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
-
-	/*glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.*/
-
-   /*runfilter(thresholdshader, fbo1, 0L, fbo2);*/
-   /**/
-   /*for (int i = 0; i< 30; i++){*/
-   /*    runfilter(lowpassshaderx, fbo2, 0L, fbo3);*/
-   /*    runfilter(lowpassshadery, fbo3, 0L, fbo2);*/
-   /*}*/
-   /**/
-   /*runfilter(combineshader, fbo1, fbo2, fbo3);*/
-
-    /*addBloom(fbo1, fbo2, fbo3, thresholdshader, lowpassshaderx, lowpassshadery, combineshader);*/
-	useFBO(0L, fbo1, 0L);
-	/*useFBO(0L, fbo3, 0L);*/
     checkTextureData();
 }
 
 
 //-------------------------------callback functions------------------------------------------
-void renderToQuad(GLuint shader){
-    /*glClearTexImage(voxelmemory, 0, GL_RED, GL_BYTE, NULL);*/
-    /*renderWorld(phongshader);*/
+void renderVoxelTexture(GLuint shader){
 	// render to fbo1!
 
 	glClearColor(0.0,0.0,0.0,0.0);
@@ -413,7 +394,6 @@ void renderToQuad(GLuint shader){
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, voxelmemory);
     printError("bind tex error");
-	glUniformMatrix4fv(glGetUniformLocation(shader, "invOrtho"), 1, GL_TRUE, InvertMat4(projectionMatrix).m);
     GLuint location = glGetUniformLocation(shader, "voxelTexture");
     printError("location error ");
     glUniform1i(location, 0);
@@ -426,6 +406,40 @@ void renderToQuad(GLuint shader){
 	printError("display error");
 
 }
+
+
+void renderWithoutVoxels(GLuint shader){   
+	// render to fbo1!
+	// Clear framebuffer & zbuffer
+	glClearColor(0.2,0.2,0.5,0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Activate shader program
+	glUseProgram(shader);
+
+    setUniforms(shader);
+
+	// Enable Z-buffering
+	glEnable(GL_DEPTH_TEST);
+	// Enable backface culling
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+    vec3 lightSource = vec3(-0.24, 1.98, 0.16);
+    for (int i = 0; model1[i] != NULL; i++)
+    {
+        glUniform3fv(glGetUniformLocation(shader, "ka"), 1, &model1[i]->material->Ka.x);
+        glUniform3fv(glGetUniformLocation(shader, "kd"), 1, &model1[i]->material->Kd.x);
+        glUniform3fv(glGetUniformLocation(shader, "ks"), 1, &model1[i]->material->Ks.x);
+        glUniform3fv(glGetUniformLocation(shader, "ke"), 1, &model1[i]->material->Ke.x);
+        glUniform3fv(glGetUniformLocation(shader, "lightSource"), 1, &lightSource.x);
+
+        DrawModel(model1[i], shader, "in_Position", "in_Normal", NULL);
+    }
+}
+
+
+
 void display(void)
 {
 	// This function is called whenever it is time to render
@@ -433,8 +447,9 @@ void display(void)
 	// function will get called several times per second
 
     initAfterOpenglContextStarted();
-    /*renderToQuad(raymarchershader);*/
+    /*renderVoxelTexture(raymarchershader);*/
     renderPoints(geometry);
+    renderWithoutVoxels(phongshader);
 
 	glutSwapBuffers();
 }
