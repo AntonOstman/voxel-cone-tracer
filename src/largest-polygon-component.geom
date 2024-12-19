@@ -32,9 +32,9 @@ void main() {
         pos2.xyz = pos2.xzy;
         pos3.xyz = pos3.xzy;
     }
-    pos1.z = 0;
-    pos2.z = 0;
-    pos3.z = 0;
+    // pos1.z = 0;
+    // pos2.z = 0;
+    // pos3.z = 0;
 
     worldPosition = gl_in[0].gl_Position;
     gl_Position = vec4(pos1, 1);

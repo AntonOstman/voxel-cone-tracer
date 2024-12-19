@@ -2,9 +2,8 @@
 layout (points) in;
 layout(triangle_strip, max_vertices = 36) out; // Output: cube (36 vertices for 6 faces)
 //
-uniform mat4 worldMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 projectionMatrix;
+uniform mat4 mvp;
+
 uniform float voxelResolution;
 uniform float voxelSize;
 out vec3 fragCoords; 
@@ -14,7 +13,6 @@ void main() {
     // Define the offsets for the cube vertices relative to the center
     float cubeSize = voxelSize / voxelResolution;
     fragCoords = gl_in[0].gl_Position.xyz / voxelSize;
-    mat4 mvp = projectionMatrix * viewMatrix * worldMatrix;
     vec3 offsets[8] = vec3[8](
         vec3(-1, -1, -1), // Bottom-left-back
         vec3( 1, -1, -1), // Bottom-right-back

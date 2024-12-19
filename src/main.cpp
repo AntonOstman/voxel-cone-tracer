@@ -71,7 +71,7 @@ GLuint voxelisingshader = 0;
 GLuint phong_largets_comp_shader = 0;
 GLuint voxelmemory = 0;
 GLuint plainshader = 0;
-GLuint geometry = 0;
+GLuint voxelCubes = 0;
 GLuint outline = 0;
 GLuint raymarchershader = 0;
 GLuint* voxelpointer = &voxelmemory;
@@ -136,7 +136,7 @@ void init(void)
 	voxelisingshader = loadShadersG("src/voxeliser.vert", "src/voxeliser.frag", "src/largest-polygon-component.geom");  // renders with light (used for initial renderin of teapot)
 	voxelrender = loadShaders("src/voxeliser.vert", "src/renderVoxel.frag");  // renders with light (used for initial renderin of teapot)
 
-    geometry = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/cube.geom");
+    voxelCubes = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/cube.geom");
     outline = loadShadersG("src/plainshader.vert", "src/plainshader.frag", "src/outline.geom");
 	phong_largets_comp_shader = loadShadersG("src/phong.vert", "src/phong.frag", "src/largest-polygon-component.geom");  // renders with light (used for initial renderin of teapot)
 
@@ -161,8 +161,8 @@ void init(void)
 
     // adhoc settings
     boxpose.anglex = 0;
-    boxpose.angley = 0;
-    boxpose.anglez = 0;
+    boxpose.angley = -0.259000;
+    boxpose.anglez = -0.009000;
     boxpose.tx = 0;
     boxpose.ty = -9.5 - 0.8*4;
     boxpose.tz = -1.0;
@@ -258,9 +258,9 @@ GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolu
                     
                     // Convert (x, y, z) to normalized or world space (optional)
                     vec3 position = vec3(
-                        (float)x / voxelResolution * voxelSize, 
-                        (float)y / voxelResolution * voxelSize, 
-                        (float)z / voxelResolution * voxelSize
+                        (float)(voxelResolution - x) / voxelResolution * voxelSize, 
+                        (float)(voxelResolution - y) / voxelResolution * voxelSize, 
+                        (float)(voxelResolution - z) / voxelResolution * voxelSize
                     );
                     /*printf("x %d y %d z %d\n", x,y,z);*/
 
@@ -291,10 +291,11 @@ void setUniforms(GLuint shader);
 
 void renderPoints(GLuint shader){
 
+	glUseProgram(shader);
+
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
-	glUseProgram(shader);
 
 	glClearColor(0.2,0.2,0.5,0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -315,6 +316,7 @@ void setUniforms(GLuint shader){
 	modelToWorldMatrix = modelToWorldMatrix * T(boxpose.tx, boxpose.ty, boxpose.tz);
     float scale = 15;
 	modelToWorldMatrix = modelToWorldMatrix * S(scale, scale, scale);
+    vec3 lightSource = vec3(-0.24, 1.98, 0.16);
 
 	glUniformMatrix4fv(glGetUniformLocation(shader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
@@ -323,6 +325,7 @@ void setUniforms(GLuint shader){
 	/*glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);*/
     glUniform1fv(glGetUniformLocation(shader, "voxelSize"), 1, &voxelSize);
     glUniform1fv(glGetUniformLocation(shader, "voxelResolution"), 1, &voxelResolution);
+    glUniform3fv(glGetUniformLocation(shader, "lightSource"), 1, &lightSource.x);
 
     glActiveTexture(GL_TEXTURE0);
     /*glBindImageTexture(GL_TEXTURE_3D, voxelmemory);*/
@@ -450,7 +453,7 @@ void display(void)
 
     initAfterOpenglContextStarted();
     /*renderVoxelTexture(raymarchershader);*/
-    renderPoints(geometry);
+    renderPoints(voxelCubes);
     /*renderWithoutVoxels(phongshader);*/
 
 	glutSwapBuffers();
@@ -509,11 +512,12 @@ void mouseDragged(int x, int y)
 
 	/*m = ArbRotate(p, sqrt(p.x*p.x + p.y*p.y) / 50.0); // Rotation in view coordinates	*/
 	/*modelToWorldMatrix = Mult(m, modelToWorldMatrix);*/
-    boxpose.anglez += (x - prevx) / 10.0;
-    boxpose.angley += (y - prevy) / 10.0;
+    boxpose.anglez += (x - prevx) / 1000.0;
+    boxpose.angley += (y - prevy) / 1000.0;
 	
 	prevx = x;
 	prevy = y;
+    printf("curr y %f z %f\n", boxpose.anglez, boxpose.angley);
 	
 	glutPostRedisplay();
 }

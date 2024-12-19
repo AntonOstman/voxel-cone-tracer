@@ -8,6 +8,7 @@ in vec3 fragCoords;
 
 void main(void)
 {
+    // out_Color = texture(voxelTexture , fragCoords); 
     out_Color = texture(voxelTexture , fragCoords)* gl_FragCoord.z; 
     // out_Color = vec4(color,1.0);
 }
