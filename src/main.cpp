@@ -258,9 +258,9 @@ GLuint createVoxelVertexBuffer(const std::vector<GLubyte> &data, int voxelResolu
                     
                     // Convert (x, y, z) to normalized or world space (optional)
                     vec3 position = vec3(
-                        (float)(voxelResolution - x) / voxelResolution * voxelSize, 
-                        (float)(voxelResolution - y) / voxelResolution * voxelSize, 
-                        (float)(voxelResolution - z) / voxelResolution * voxelSize
+                        (float)x / voxelResolution * voxelSize, 
+                        (float)y / voxelResolution * voxelSize, 
+                        (float)z / voxelResolution * voxelSize
                     );
                     /*printf("x %d y %d z %d\n", x,y,z);*/
 
@@ -293,8 +293,8 @@ void renderPoints(GLuint shader){
 
 	glUseProgram(shader);
 
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	/*glEnable(GL_CULL_FACE);*/
+	/*glCullFace(GL_BACK);*/
 	glEnable(GL_DEPTH_TEST);
 
 	glClearColor(0.2,0.2,0.5,0);
@@ -472,7 +472,7 @@ void reshape(GLsizei w, GLsizei h)
     /*float front = 40;*/
     /*float back = 40;*/
     GLfloat left = -20; 
-    GLfloat right = 25;
+    GLfloat right = 20;
     GLfloat bottom = -20; 
     GLfloat top = 20; 
     GLfloat near = -20; 
