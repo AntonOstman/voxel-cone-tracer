@@ -95,19 +95,6 @@ void generateVoxelMemory(GLuint* tex, GLsizei voxelResolution){
 }
 
 //-------------------------------------------------------------------------------------
-void runfilter(GLuint shader, FBOstruct *in1, FBOstruct *in2, FBOstruct *out)
-{
-    glUseProgram(shader);
-    // Many of these things would be more efficiently done once and for all
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
-    glUniform1i(glGetUniformLocation(shader, "texUnit2"), 1);
-
-    useFBO(out, in1, in2);
-    DrawModel(squareModel, shader, "in_Position", NULL, "in_TexCoord");
-    glFlush();
-}
 
 void renderWorld(GLuint shader);
 
@@ -177,27 +164,6 @@ void init(void)
 	viewMatrix = lookAtv(cam, point, up);
 }
 
-
-/*
-   @param sceneFBO - fbo with rendered scene
-   @param intermediateFBO - intermediate fbo used in a ping pong step
-   @param fboOut - Rendered scene with added bloom effect
-
-   Screen space blooming effect output to fbo
-*/
-
-void addBloom(FBOstruct *sceneFBO, FBOstruct *intermediateFBO, FBOstruct *fboOut, 
-              GLuint thresholdingshader, GLuint lowpassx, GLuint lowpassy, GLuint combiningshader)
-{
-   runfilter(thresholdingshader, sceneFBO, 0L, intermediateFBO);
-
-   for (int i = 0; i < 30; i++){
-       runfilter(lowpassx, intermediateFBO, 0L, fboOut);
-       runfilter(lowpassy, fboOut, 0L, intermediateFBO);
-   }
-
-   runfilter(combiningshader, sceneFBO, intermediateFBO, fboOut);
-}
 
 GLuint createVoxelVertexBuffer(const std::vector<GLubyte>& data, int voxelResolution, std::vector<vec3> &positions);
 std::vector<vec3> positions;
@@ -454,6 +420,7 @@ void display(void)
     initAfterOpenglContextStarted();
     /*renderVoxelTexture(raymarchershader);*/
     renderPoints(voxelCubes);
+    /*renderPoints(outline);*/
     /*renderWithoutVoxels(phongshader);*/
 
 	glutSwapBuffers();
