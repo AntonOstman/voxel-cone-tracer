@@ -40,7 +40,7 @@ void main(void)
 		specular = 1.0 * pow(specular, 150.0);
 	specular = max(specular, 0.0);
 	specular = min(specular, 1.0);
-	vec3 shade = kd*diffuse + ks*specular + ka / 5.0 + ke;
+	vec3 shade = kd*diffuse + ks*specular + ka + ke;
 
     // Voxelising
     // scale [-1, 1] to [0, 1]
